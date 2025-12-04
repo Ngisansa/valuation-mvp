@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: valuecog
+          POSTGRES_PASSWORD: valuecogpass
+          POSTGRES_DB: valuecogdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - name: Install backend deps
+      run: cd backend && npm ci
+    - name: Run migrations & seed & tests
+      run: |
+        cd backend
+        npm run migrate
+        npm run seed
+        npm test
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+    # Optional Docker build/push steps commented out
+    #- name: Build Docker images
+    #  run: docker build -t valuecog/backend ./backend

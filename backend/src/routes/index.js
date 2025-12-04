@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+
+const authRoutes = require('./auth');
+const compRoutes = require('./comps');
+const valuationRoutes = require('./valuations');
+const paymentRoutes = require('./payments');
+const pdfRoutes = require('./pdf');
+const adminRoutes = require('./admin');
+
+router.use('/auth', authRoutes);
+router.use('/comps', compRoutes);
+router.use('/valuations', valuationRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/pdf', pdfRoutes);
+router.use('/admin', adminRoutes);
+
+module.exports = router;

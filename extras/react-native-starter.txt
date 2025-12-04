@@ -1,0 +1,25 @@
+// React Native starter (single-file example)
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button } from 'react-native';
+import axios from 'axios';
+
+export default function App() {
+  const [token, setToken] = useState('');
+  const [result, setResult] = useState(null);
+
+  const callValuation = async () => {
+    const resp = await axios.post('http://your-backend/api/valuations',
+      { type: 'property', inputs: { lat: -1.2921, lon: 36.8219, area_sqm: 120, property_type: 'apartment' } },
+      { headers: { Authorization: `Bearer ${token}` } });
+    setResult(resp.data.valuation);
+  };
+
+  return (
+    <View style={{ padding: 20 }}>
+      <Text>ValueCog RN Starter</Text>
+      <TextInput placeholder="JWT token" value={token} onChangeText={setToken} />
+      <Button title="Estimate" onPress={callValuation} />
+      <Text>{JSON.stringify(result)}</Text>
+    </View>
+  );
+}
