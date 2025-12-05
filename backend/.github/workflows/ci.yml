@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-ci:
+    name: Backend CI (migrations + tests)
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: valuation_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/valuation_db
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: valuation_db
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: valuation_db
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Wait for Postgres to be ready
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          echo "Waiting for Postgres on host 'db'..."
+          export PGPASSWORD=${{ env.DB_PASSWORD }}
+          for i in $(seq 1 30); do
+            pg_isready -h "${{ env.DB_HOST }}" -p 5432 -U "${{ env.DB_USER }}" && break
+            echo "Postgres is not ready yet ($i/30) — sleeping 2s"
+            sleep 2
+          done
+        shell: bash
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Run tests
+        working-directory: backend
+        run: npm test
