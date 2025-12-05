@@ -1,0 +1,13 @@
+﻿node_modules
+.env
+.env.local
+/dist
+/backend/node_modules
+/frontend/node_modules
+/backend/.env
+/frontend/.env
+/.venv
+.DS_Store
+npm-debug.log
+yarn-error.log
+coverage
