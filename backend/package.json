@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "valuecog-backend",
   "version": "0.1.0",
   "main": "server.js",
@@ -22,17 +22,15 @@
     "jsonwebtoken": "^9.0.0",
     "knex": "^2.5.1",
     "multer": "^1.4.5-lts.1",
-    "node-fetch": "^3.4.1",
     "pg": "^8.10.0",
-    "sqlite3": "^5.1.6",
-    "csv-parse": "^5.4.0",
-    "axios": "^1.4.0",
     "pdfkit": "^0.13.0",
-    "stream-buffers": "^3.0.2"
+    "sqlite3": "^5.1.6",
+    "stream-buffers": "^3.0.2",
+    "csv-parse": "^5.4.0",
+    "axios": "^1.4.0"
   },
   "devDependencies": {
     "jest": "^29.6.1",
-    "supertest": "^6.4.0",
     "nodemon": "^2.0.22",
     "eslint": "^8.50.0"
   }
