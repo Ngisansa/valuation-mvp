@@ -1,6 +1,7 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
-const parse = require('csv-parse/lib/sync');
+// Use the exported sync parser path
+const parse = require('csv-parse/sync').parse;
 
 module.exports = {
   list: async (req, res) => {

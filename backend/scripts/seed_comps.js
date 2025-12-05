@@ -1,9 +1,7 @@
-/**
- * Seed comps from CSV into DB using knex
- */
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
-const parse = require('csv-parse/lib/sync');
+// Use the exported sync parser path
+const parse = require('csv-parse/sync').parse;
 require('dotenv').config();
 const knexConfig = require('../knexfile');
 const knex = require('knex')(knexConfig.development);
