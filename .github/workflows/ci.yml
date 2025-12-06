@@ -11,21 +11,13 @@ jobs:
     name: Backend CI (migrations + tests)
     runs-on: ubuntu-latest
 
-    services:
-      db:
-        image: postgres:14
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: valuation_db
-
     env:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/valuation_db
-      DB_HOST: db
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/valuation_db
+      DB_HOST: localhost
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: valuation_db
-      PGHOST: db
+      PGHOST: localhost
       PGUSER: postgres
       PGPASSWORD: postgres
       PGDATABASE: valuation_db
@@ -34,44 +26,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: "Diagnostics: env & DNS"
+      - name: Start Postgres (docker)
         shell: bash
         run: |
-          echo "=== ENV VARS ==="
-          echo "DATABASE_URL=${DATABASE_URL}"
-          echo "DB_HOST=${DB_HOST}"
-          echo "DB_USER=${DB_USER}"
-          echo "DB_NAME=${DB_NAME}"
-          echo
-          echo "=== /etc/hosts (first 200 lines) ==="
-          sudo sed -n '1,200p' /etc/hosts || true
-          echo
-          echo "=== getent hosts db ==="
-          getent hosts db || true
-          echo
-          echo "=== ping db (1 packet) ==="
-          ping -c 1 db || true
-          echo
-          echo "=== pg_isready db:5432 ==="
-          pg_isready -h db -p 5432 -U postgres || true
-
-      - name: "Wait for Postgres"
-        shell: bash
-        run: |
+          echo "Starting Postgres container..."
+          docker run --name ci-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=valuation_db -p 5432:5432 -d postgres:14
+          echo "Installing postgresql-client for health checks..."
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client -qq
-          export PGPASSWORD="$DB_PASSWORD"
-          echo "Waiting for Postgres on host 'db' (up to 30 attempts)"
-          for i in $(seq 1 30); do
-            if pg_isready -h "$DB_HOST" -p 5432 -U "$DB_USER"; then
-              echo "Postgres ready after $i attempts"
-              exit 0
-            fi
-            echo "Postgres not ready ($i/30) — sleeping 2s"
+          echo "Waiting for Postgres to accept connections on localhost:5432..."
+          export PGPASSWORD=postgres
+          for i in $(seq 1 60); do
+            pg_isready -h localhost -p 5432 -U postgres && { echo "Postgres ready after $i attempts"; break; }
+            echo "Postgres not ready yet ($i/60) — sleeping 2s"
             sleep 2
           done
-          echo "Postgres did not become ready after 30 attempts"
-          exit 1
+
+      - name: Diagnostics (quick)
+        shell: bash
+        run: |
+          echo "=== /etc/hosts (first 50 lines) ==="
+          sudo sed -n '1,50p' /etc/hosts || true
+          echo "=== pg_isready localhost:5432 ==="
+          pg_isready -h localhost -p 5432 -U postgres || true
+          echo "=== trying psql --version and connection test ==="
+          psql --version || true
+          echo "SELECT 1" | psql "postgresql://postgres:postgres@localhost:5432/valuation_db" -q -t -A || true
 
       - name: Install backend dependencies
         working-directory: backend
