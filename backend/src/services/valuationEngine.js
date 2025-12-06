@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Valuation engine implementing:
  * - property comparative method (median price/sqm from comps)
  * - income approach (NOI / cap rate)
@@ -151,29 +151,27 @@ module.exports = {
     let type;
     let inputs;
 
-    // Accept either:
-    //  - a function fakeKnex (tests may provide a fakeKnex function)
-    //  - or an initialized knex object (has .client)
-    //  - or the single-arg legacy params object
-    if (args.length >= 1 && args[0]) {
-      if (typeof args[0] === 'function' || (typeof args[0] === 'object' && args[0].client)) {
-        localKnex = args[0];
-        type = args[1];
-        inputs = args[2] || {};
-      } else if (args.length === 1 && typeof args[0] === 'object' && !args[0].type) {
-        type = 'property';
-        inputs = args[0];
-      } else {
-        type = args[0];
-        inputs = args[1] || {};
-      }
+    // New robust detection:
+    // - If there are at least 2 arguments and the second is a string, treat first arg as knex (object or function)
+    //   e.g. estimate(fakeKnex, 'property', inputs) or estimate(knexInstance, 'business', inputs)
+    // - If single object argument, treat as legacy property params: estimate(params)
+    // - Otherwise treat as (type, inputs)
+    if (args.length >= 2 && typeof args[1] === 'string') {
+      localKnex = args[0];
+      type = args[1];
+      inputs = args[2] || {};
+    } else if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !args[0].type) {
+      type = 'property';
+      inputs = args[0];
+    } else if (args.length >= 1) {
+      type = args[0];
+      inputs = args[1] || {};
     } else {
-      // default fallback
       type = 'property';
       inputs = {};
     }
 
-    // Normalize type
+    // Normalize type default
     if (!type) type = 'property';
 
     // Dispatch
