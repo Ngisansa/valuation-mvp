@@ -31,7 +31,12 @@ async function estimateProperty(localKnex, inputs) {
   const lonMin = lon - 0.02;
   const lonMax = lon + 0.02;
 
-  const comps = await localKnex('comps')
+  // Normalize localKnex to a callable function:
+  // - if it's already a function (real knex or fakeKnex factory), use it
+  // - if it's an object implementing query methods, wrap it so calling knexClient('table') returns that object
+  const knexClient = (typeof localKnex === 'function') ? localKnex : (table => localKnex);
+
+  const comps = await knexClient('comps')
     .whereBetween('lat', [latMin, latMax])
     .andWhereBetween('lon', [lonMin, lonMax])
     .andWhere('property_type', property_type)
