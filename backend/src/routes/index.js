@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 
 const authRoutes = require('./auth');
@@ -8,10 +8,14 @@ const paymentRoutes = require('./payments');
 const pdfRoutes = require('./pdf');
 const adminRoutes = require('./admin');
 
+// mount Paystack router
+const paystackRouter = require('./payments/paystack');
+
 router.use('/auth', authRoutes);
 router.use('/comps', compRoutes);
 router.use('/valuations', valuationRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/payments/paystack', paystackRouter);
 router.use('/pdf', pdfRoutes);
 router.use('/admin', adminRoutes);
 
