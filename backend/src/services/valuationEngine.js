@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Valuation engine implementing:
  * - property comparative method (median price/sqm from comps)
  * - income approach (NOI / cap rate)
@@ -151,19 +151,26 @@ module.exports = {
     let type;
     let inputs;
 
-    // If first arg looks like a knex instance (object with client property and query builder function)
-    if (args.length >= 1 && args[0] && typeof args[0] === 'object' && args[0].client) {
-      localKnex = args[0];
-      type = args[1];
-      inputs = args[2] || {};
-    } else if (args.length === 1 && typeof args[0] === 'object' && !args[0].type) {
-      // legacy single-arg where params describe a property
-      type = 'property';
-      inputs = args[0];
+    // Accept either:
+    //  - a function fakeKnex (tests may provide a fakeKnex function)
+    //  - or an initialized knex object (has .client)
+    //  - or the single-arg legacy params object
+    if (args.length >= 1 && args[0]) {
+      if (typeof args[0] === 'function' || (typeof args[0] === 'object' && args[0].client)) {
+        localKnex = args[0];
+        type = args[1];
+        inputs = args[2] || {};
+      } else if (args.length === 1 && typeof args[0] === 'object' && !args[0].type) {
+        type = 'property';
+        inputs = args[0];
+      } else {
+        type = args[0];
+        inputs = args[1] || {};
+      }
     } else {
-      // (type, inputs)
-      type = args[0];
-      inputs = args[1] || {};
+      // default fallback
+      type = 'property';
+      inputs = {};
     }
 
     // Normalize type
