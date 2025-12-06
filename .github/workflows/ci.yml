@@ -21,7 +21,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-cmd '"'"'pg_isready -U postgres -h localhost'"'"'
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -41,14 +41,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Diagnostics: environment and DNS
+      - name: Diagnostics: environment & DNS
         shell: bash
         run: |
           echo "=== ENV VARS ==="
-          echo "DATABASE_URL=${DATABASE_URL}"
-          echo "DB_HOST=${DB_HOST}"
-          echo "DB_USER=${DB_USER}"
-          echo "DB_NAME=${DB_NAME}"
+          echo "DATABASE_URL=$DATABASE_URL"
+          echo "DB_HOST=$DB_HOST"
+          echo "DB_USER=$DB_USER"
+          echo "DB_NAME=$DB_NAME"
           echo
           echo "=== /etc/hosts (first 200 lines) ==="
           sudo sed -n '1,200p' /etc/hosts || true
@@ -57,26 +57,26 @@ jobs:
           getent hosts db || true
           echo
           echo "=== nslookup db ==="
-          nslookup db || true
+          command -v nslookup >/dev/null && nslookup db || true
           echo
           echo "=== ping db (3 packets) ==="
           ping -c 3 db || true
           echo
-          echo "=== TCP probe /dev/tcp/db/5432 ==="
+          echo "=== TCP probe db:5432 ==="
           bash -c 'timeout 1 bash -c "cat < /dev/tcp/db/5432" >/dev/null 2>&1 && echo TCP_OPEN || echo TCP_CLOSED' || true
           echo
-          echo "=== pg_isready against db:5432 ==="
+          echo "=== pg_isready db:5432 ==="
           pg_isready -h db -p 5432 -U postgres || true
 
-      - name: Wait for Postgres to be ready (longer)
+      - name: Wait for Postgres
         shell: bash
         run: |
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client dnsutils -qq
           echo "Waiting for Postgres on host 'db' (up to 60 attempts)"
-          export PGPASSWORD="${DB_PASSWORD}"
+          export PGPASSWORD="$DB_PASSWORD"
           for i in $(seq 1 60); do
-            pg_isready -h "${DB_HOST}" -p 5432 -U "${DB_USER}" && { echo "Postgres ready after $i attempts"; break; }
+            pg_isready -h "$DB_HOST" -p 5432 -U "$DB_USER" && { echo "Postgres ready after $i attempts"; break; }
             echo "Postgres is not ready yet ($i/60) — sleeping 2s"
             sleep 2
           done
