@@ -27,13 +27,15 @@ jobs:
           --health-retries 5
 
     env:
-      # Provide connection info for Knex/your app; adjust names to match knexfile if different
       DATABASE_URL: postgres://postgres:postgres@db:5432/valuation_db
       DB_HOST: db
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: valuation_db
-      # If your app uses other env names (PGHOST/PGUSER etc.) add them here
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: valuation_db
 
     steps:
       - name: Checkout
@@ -45,7 +47,6 @@ jobs:
           node-version: '22'
 
       - name: Wait for Postgres to be ready
-        # install postgresql client then poll with pg_isready
         run: |
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client
