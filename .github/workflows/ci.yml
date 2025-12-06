@@ -41,20 +41,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - name: Diagnostics: environment and DNS
+        run: |
+          echo "=== ENV VARS (selected) ==="
+          echo "DATABASE_URL=$DATABASE_URL"
+          echo "DB_HOST=$DB_HOST"
+          echo "DB_USER=$DB_USER"
+          echo "DB_PASSWORD=$( [ -z "$DB_PASSWORD" ] && echo "<empty>" || echo "<redacted>" )"
+          echo "PGHOST=$PGHOST"
+          echo "PGUSER=$PGUSER"
+          echo "PGPASSWORD=$( [ -z "$PGPASSWORD" ] && echo "<empty>" || echo "<redacted>" )"
+          echo "PGDATABASE=$PGDATABASE"
+          echo
+          echo "=== /etc/hosts contents (first 200 lines) ==="
+          sudo sed -n '1,200p' /etc/hosts || true
+          echo
+          echo "=== getent hosts db ==="
+          getent hosts db || true
+          echo
+          echo "=== nslookup db (if installed) ==="
+          nslookup db || true
+          echo
+          echo "=== dig db (if installed) ==="
+          dig db || true
+          echo
+          echo "=== ping db (3 packets) ==="
+          ping -c 3 db || true
+          echo
+          echo "=== TCP probe /dev/tcp/db/5432 ==="
+          bash -c 'timeout 1 bash -c "cat < /dev/tcp/db/5432" >/dev/null 2>&1 && echo TCP_OPEN || echo TCP_CLOSED' || true
+          echo
+          echo "=== pg_isready against db:5432 ==="
+          pg_isready -h db -p 5432 -U postgres || true
+        shell: bash
 
-      - name: Wait for Postgres to be ready
+      - name: Wait for Postgres to be ready (longer)
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y postgresql-client
-          echo "Waiting for Postgres on host 'db'..."
+          sudo apt-get install -y postgresql-client dnsutils -qq
+          echo "Waiting for Postgres on host 'db' (attempts up to 60)..."
           export PGPASSWORD=${{ env.DB_PASSWORD }}
-          for i in $(seq 1 30); do
-            pg_isready -h "${{ env.DB_HOST }}" -p 5432 -U "${{ env.DB_USER }}" && break
-            echo "Postgres is not ready yet ($i/30) — sleeping 2s"
+          for i in $(seq 1 60); do
+            pg_isready -h "${{ env.DB_HOST }}" -p 5432 -U "${{ env.DB_USER }}" && { echo "Postgres ready after $i attempts"; break; }
+            echo "Postgres is not ready yet ($i/60) — sleeping 2s"
             sleep 2
           done
         shell: bash
