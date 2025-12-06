@@ -11,3 +11,12 @@
 npm-debug.log
 yarn-error.log
 coverage
+
+# Ignore local backend backups
+/backend-backup-*
+/backend-backup-light-*
+/backend-source-backup-*
+/backend/*.bak
+/backend/**/*.bak
+/backend-source-backup-*.zip
+*.zip
