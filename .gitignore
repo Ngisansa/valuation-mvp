@@ -20,3 +20,12 @@ coverage
 /backend/**/*.bak
 /backend-source-backup-*.zip
 *.zip
+
+# Ignore local backend backups
+/backend-backup-*
+/backend-backup-light-*
+/backend-source-backup-*
+/backend/*.bak
+/backend/**/*.bak
+/backend-source-backup-*.zip
+*.zip
