@@ -20,11 +20,6 @@ jobs:
           POSTGRES_DB: valuation_db
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd '"'"'pg_isready -U postgres -h localhost'"'"'
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     env:
       DATABASE_URL: postgres://postgres:postgres@db:5432/valuation_db
@@ -41,14 +36,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Diagnostics: environment & DNS
+      - name: Diagnostics: env & DNS
         shell: bash
         run: |
           echo "=== ENV VARS ==="
-          echo "DATABASE_URL=$DATABASE_URL"
-          echo "DB_HOST=$DB_HOST"
-          echo "DB_USER=$DB_USER"
-          echo "DB_NAME=$DB_NAME"
+          echo "DATABASE_URL=${DATABASE_URL}"
+          echo "DB_HOST=${DB_HOST}"
+          echo "DB_USER=${DB_USER}"
+          echo "DB_NAME=${DB_NAME}"
           echo
           echo "=== /etc/hosts (first 200 lines) ==="
           sudo sed -n '1,200p' /etc/hosts || true
@@ -56,14 +51,8 @@ jobs:
           echo "=== getent hosts db ==="
           getent hosts db || true
           echo
-          echo "=== nslookup db ==="
-          command -v nslookup >/dev/null && nslookup db || true
-          echo
-          echo "=== ping db (3 packets) ==="
-          ping -c 3 db || true
-          echo
-          echo "=== TCP probe db:5432 ==="
-          bash -c 'timeout 1 bash -c "cat < /dev/tcp/db/5432" >/dev/null 2>&1 && echo TCP_OPEN || echo TCP_CLOSED' || true
+          echo "=== ping db (single) ==="
+          ping -c 1 db || true
           echo
           echo "=== pg_isready db:5432 ==="
           pg_isready -h db -p 5432 -U postgres || true
@@ -72,14 +61,16 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y postgresql-client dnsutils -qq
-          echo "Waiting for Postgres on host 'db' (up to 60 attempts)"
+          sudo apt-get install -y postgresql-client -qq
           export PGPASSWORD="$DB_PASSWORD"
+          echo "Waiting for Postgres on host 'db' (up to 60 attempts)"
           for i in $(seq 1 60); do
-            pg_isready -h "$DB_HOST" -p 5432 -U "$DB_USER" && { echo "Postgres ready after $i attempts"; break; }
+            pg_isready -h "$DB_HOST" -p 5432 -U "$DB_USER" && { echo "Postgres ready after $i attempts"; exit 0; }
             echo "Postgres is not ready yet ($i/60) — sleeping 2s"
             sleep 2
           done
+          echo "Postgres did not become ready after 60 attempts"
+          exit 1
 
       - name: Install backend dependencies
         working-directory: backend
