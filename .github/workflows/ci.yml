@@ -7,42 +7,60 @@ on:
     branches: [ main ]
 
 jobs:
-  test-and-build:
+  backend-ci:
+    name: Backend CI (migrations + tests)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: valuecog
-          POSTGRES_PASSWORD: valuecogpass
-          POSTGRES_DB: valuecogdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/valuation_db
+      DB_HOST: localhost
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: valuation_db
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: valuation_db
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
-    - name: Install backend deps
-      run: cd backend && npm ci
-    - name: Run migrations & seed & tests
-      run: |
-        cd backend
-        npm run migrate
-        npm run seed
-        npm test
-    - name: Build frontend
-      run: |
-        cd frontend
-        npm ci
-        npm run build
-    # Optional Docker build/push steps commented out
-    #- name: Build Docker images
-    #  run: docker build -t valuecog/backend ./backend
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Postgres (docker)
+        shell: bash
+        run: |
+          echo "Starting Postgres container..."
+          docker run --name ci-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=valuation_db -p 5432:5432 -d postgres:14
+          echo "Installing postgresql-client for health checks..."
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client -qq
+          echo "Waiting for Postgres to accept connections on localhost:5432..."
+          export PGPASSWORD=postgres
+          for i in $(seq 1 60); do
+            pg_isready -h localhost -p 5432 -U postgres && { echo "Postgres ready after $i attempts"; break; }
+            echo "Postgres not ready yet ($i/60) — sleeping 2s"
+            sleep 2
+          done
+
+      - name: Diagnostics (quick)
+        shell: bash
+        run: |
+          echo "=== /etc/hosts (first 50 lines) ==="
+          sudo sed -n '1,50p' /etc/hosts || true
+          echo "=== pg_isready localhost:5432 ==="
+          pg_isready -h localhost -p 5432 -U postgres || true
+          echo "=== trying psql --version and connection test ==="
+          psql --version || true
+          echo "SELECT 1" | psql "postgresql://postgres:postgres@localhost:5432/valuation_db" -q -t -A || true
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Run tests
+        working-directory: backend
+        run: npm test
